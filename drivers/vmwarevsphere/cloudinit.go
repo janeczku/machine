@@ -22,7 +22,7 @@ const (
 )
 
 func (d *Driver) cloudInit(vm *object.VirtualMachine) error {
-	if d.CloudInit != "" {
+	if d.CreationType == creationTypeLegacy {
 		return d.cloudInitGuestInfo(vm)
 	}
 
@@ -44,28 +44,30 @@ func (d *Driver) cloudInit(vm *object.VirtualMachine) error {
 }
 
 func (d *Driver) cloudInitGuestInfo(vm *object.VirtualMachine) error {
+	if d.CloudInit == "" {
+		return nil
+	}
+
 	var opts []types.BaseOptionValue
-	if d.CloudInit != "" {
-		if _, err := url.ParseRequestURI(d.CloudInit); err == nil {
-			log.Infof("setting guestinfo.cloud-init.data.url to %s\n", d.CloudInit)
-			opts = append(opts, &types.OptionValue{
-				Key:   "guestinfo.cloud-init.config.url",
-				Value: d.CloudInit,
-			})
-		} else {
-			if _, err := os.Stat(d.CloudInit); err == nil {
-				if value, err := ioutil.ReadFile(d.CloudInit); err == nil {
-					log.Infof("setting guestinfo.cloud-init.data to encoded content of %s\n", d.CloudInit)
-					encoded := base64.StdEncoding.EncodeToString(value)
-					opts = append(opts, &types.OptionValue{
-						Key:   "guestinfo.cloud-init.config.data",
-						Value: encoded,
-					})
-					opts = append(opts, &types.OptionValue{
-						Key:   "guestinfo.cloud-init.data.encoding",
-						Value: "base64",
-					})
-				}
+	if _, err := url.ParseRequestURI(d.CloudInit); err == nil {
+		log.Infof("setting guestinfo.cloud-init.data.url to %s\n", d.CloudInit)
+		opts = append(opts, &types.OptionValue{
+			Key:   "guestinfo.cloud-init.config.url",
+			Value: d.CloudInit,
+		})
+	} else {
+		if _, err := os.Stat(d.CloudInit); err == nil {
+			if value, err := ioutil.ReadFile(d.CloudInit); err == nil {
+				log.Infof("setting guestinfo.cloud-init.data to encoded content of %s\n", d.CloudInit)
+				encoded := base64.StdEncoding.EncodeToString(value)
+				opts = append(opts, &types.OptionValue{
+					Key:   "guestinfo.cloud-init.config.data",
+					Value: encoded,
+				})
+				opts = append(opts, &types.OptionValue{
+					Key:   "guestinfo.cloud-init.data.encoding",
+					Value: "base64",
+				})
 			}
 		}
 	}
